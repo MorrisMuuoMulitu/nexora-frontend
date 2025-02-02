@@ -19,7 +19,7 @@ function App() {
         params.append("pageSize", 10);
 
         const response = await axios.get(
-          `http://localhost:5003/news?${params.toString()}`,
+          "https://nexora-backend.onrender.com/news",
         );
         setArticles(response.data);
         setLoading(false);
