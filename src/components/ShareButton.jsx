@@ -21,7 +21,9 @@ const ShareButton = ({ articleUrl, articleTitle, onShareToggle }) => {
       alert("Web Share API is not supported in your browser. Use the links below to share.");
     }
     setShowOptions(true);
-    onShareToggle(true); // Notify parent component that share options are visible
+    if (onShareToggle) {
+      onShareToggle(true); // Notify parent component that share options are visible
+    }
   };
 
   const redditShareUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(articleUrl)}&title=${encodeURIComponent(articleTitle)}`;
@@ -32,7 +34,9 @@ const ShareButton = ({ articleUrl, articleTitle, onShareToggle }) => {
     function handleClickOutside(event) {
       if (shareOptionsRef.current && !shareOptionsRef.current.contains(event.target)) {
         setShowOptions(false);
-        onShareToggle(false); // Notify parent component that share options are hidden
+        if (typeof onShareToggle === 'function') {
+          onShareToggle(false); // Notify parent component that share options are hidden
+        }
       }
     }
 

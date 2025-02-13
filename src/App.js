@@ -9,10 +9,6 @@ import "./App.css";
 import moment from "moment";
 import Loader from "./components/Loader";
 import { useInView } from "react-intersection-observer"; // For infinite scroll
-import {
-  CSSTransition,
-  TransitionGroup,
-} from "react-transition-group"; // For animations
 
 // Lazy load the share button component
 const ShareButton = React.lazy(() => import("./components/ShareButton"));
@@ -22,6 +18,29 @@ const truncateDescription = (description, maxLength = 100) => {
   if (!description) return "No description available.";
   if (description.length <= maxLength) return description;
   return description.slice(0, maxLength) + "...";
+};
+
+// Function to sanitize API response and remove Symbols
+const sanitizeApiResponse = (data) => {
+  if (typeof data === 'symbol') {
+    return undefined; // Remove Symbols
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeApiResponse(item));
+  }
+
+  if (typeof data === 'object' && data !== null) {
+    const sanitized = {};
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        sanitized[key] = sanitizeApiResponse(data[key]);
+      }
+    }
+    return sanitized;
+  }
+
+  return data;
 };
 
 function App() {
@@ -43,10 +62,9 @@ function App() {
   const categories = [
     { value: "", label: "All" },
     { value: "business", label: "Business" },
-    { value: "entertainment", label: "Entertainment" },
-    { value: "health", label: "Health" },
+    { value: "entertainment", label: "Health" },
     { value: "science", label: "Science" },
-    { value: "sports", label: "Sports" },
+    { value: "sports", label: "Science" },
     { value: "technology", label: "Technology" },
   ];
 
@@ -118,18 +136,19 @@ function App() {
 
         const uniqueArticles = response.data.filter(
           (article, index, self) =>
-          index === self.findIndex(
-            (a) =>
-            (a.url && a.url === article.url) ||
-            (a.title === article.title &&
-              a.publishedAt === article.publishedAt)
-          )
+            index === self.findIndex(
+              (a) =>
+                (a.url && a.url === article.url) ||
+                (a.title === article.title &&
+                  a.publishedAt === article.publishedAt)
+            )
         );
 
         const processedUniqueArticles = processArticles(uniqueArticles);
+        const sanitizedArticles = sanitizeApiResponse(processedUniqueArticles);
 
-        setArticles(processedUniqueArticles);
-        cacheArticles(processedUniqueArticles); // Cache the articles
+        setArticles(sanitizedArticles);
+        cacheArticles(sanitizedArticles); // Cache the articles
         setPage(1); // Reset page to 1 after loading new articles
         setError(null); // Clear any previous error messages
       } catch (apiError) {
@@ -218,17 +237,18 @@ function App() {
 
           const uniqueArticles = response.data.filter(
             (article, index, self) =>
-            index === self.findIndex(
-              (a) =>
-              (a.url && a.url === article.url) ||
-              (a.title === article.title &&
-                a.publishedAt === article.publishedAt)
-            )
+              index === self.findIndex(
+                (a) =>
+                  (a.url && a.url === article.url) ||
+                  (a.title === article.title &&
+                    a.publishedAt === article.publishedAt)
+              )
           );
 
           const processedUniqueArticles = processArticles(uniqueArticles);
+          const sanitizedArticles = sanitizeApiResponse(processedUniqueArticles);
 
-          setArticles((prevArticles) => [...prevArticles, ...processedUniqueArticles]);
+          setArticles((prevArticles) => [...prevArticles, ...sanitizedArticles]);
           setPage((prevPage) => prevPage + 1);
         } catch (error) {
           console.error("Error loading more articles:", error);
@@ -271,7 +291,7 @@ function App() {
     setShowSavedArticles(!showSavedArticles);
   };
 
-  const handleCategoryChange = (newCategory) => {
+  const handleCategoryChange = async (newCategory) => {
     setCategory(newCategory);
     setPage(1);
   };
@@ -305,6 +325,14 @@ function App() {
     setQuery(suggestion);
     setSearchSuggestions([]); // Clear suggestions after selection
     setPage(1); // Reset to the first page
+  };
+
+  const handleArticleAppear = (index) => {
+    setTimeout(() => {
+      const newArticles = [...articles];
+      newArticles[index].isVisible = true;
+      setArticles(newArticles);
+    }, 10); // Small delay to allow the component to mount
   };
 
   return (
@@ -381,18 +409,20 @@ function App() {
       {loading && page === 1 && !showSavedArticles ? (
         <Loader /> // Replaced "Loading..." text with Loader component
       ) : !showSavedArticles ? (
-        <TransitionGroup
+        <div
           className="article-list"
           component="div"
           ref={articleListRef}
         >
-          {articles.map((article, index) => (
-            <CSSTransition
-              key={article.url || index}
-              timeout={500}
-              classNames="fade"
-            >
-              <div className="article-card">
+          {articles.map((article, index) => {
+            const currentIndex = index; // Capture the correct index
+
+            return (
+              <div
+                key={article.url || index}
+                className={`article-card ${article.isVisible ? 'fade-in' : 'fade-out'}`}
+                onAnimationStart={() => handleArticleAppear(currentIndex)}
+              >
                 <img
                   src={article.urlToImage || "https://via.placeholder.com/150"}
                   alt={article.title}
@@ -432,7 +462,7 @@ function App() {
                         articleTitle={article.title}
                         onShareToggle={(isVisible) => {
                           const newArticles = [...articles];
-                          newArticles[index].showShare = isVisible;
+                          newArticles[currentIndex].showShare = isVisible;
                           setArticles([...newArticles]);
                         }}
                       />
@@ -440,13 +470,13 @@ function App() {
                   </div>
                 </div>
               </div>
-            </CSSTransition>
-          ))}
+            );
+          })}
           {isPaginating && <p>Loading more articles...</p>}
           {loading && <Loader />}
           <div ref={infiniteScrollRef} />
           {/* Intersection observer */}
-        </TransitionGroup>
+        </div>
       ) : showSavedArticles ? (
         <div className="article-list">
           {savedArticles.map((article, index) => (
