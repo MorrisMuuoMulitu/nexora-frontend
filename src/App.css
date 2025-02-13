@@ -190,10 +190,11 @@ h1 {
 .article-list {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: center; /* Changed from flex-start to center */
   gap: 15px; /* Reduced gap for smaller screens */
   margin-top: 15px; /* Reduced margin for smaller screens */
   transition: opacity 0.5s ease-in-out;
+  width: 100%; /* Added width to take up the full container */
 }
 
 .article-list.fade-out {
@@ -365,6 +366,10 @@ h1 {
   background-color: #c82333;
 }
 
+.hidden {
+  display: none;
+}
+
 /* Media query for tablet and larger screens */
 @media (min-width: 768px) {
   .App {
@@ -418,6 +423,8 @@ h1 {
   .article-list {
     gap: 20px; /* Restore default article list gap */
     margin-top: 20px; /* Restore default article list margin */
+    width: 100%;
+    justify-content: center;
   }
 
   .article-card {
