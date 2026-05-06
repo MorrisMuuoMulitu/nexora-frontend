@@ -20,29 +20,6 @@ const truncateDescription = (description, maxLength = 100) => {
   return description.slice(0, maxLength) + "...";
 };
 
-// Function to sanitize API response and remove Symbols
-const sanitizeApiResponse = (data) => {
-  if (typeof data === 'symbol') {
-    return undefined; // Remove Symbols
-  }
-
-  if (Array.isArray(data)) {
-    return data.map(item => sanitizeApiResponse(item));
-  }
-
-  if (typeof data === 'object' && data !== null) {
-    const sanitized = {};
-    for (const key in data) {
-      if (data.hasOwnProperty(key)) {
-        sanitized[key] = sanitizeApiResponse(data[key]);
-      }
-    }
-    return sanitized;
-  }
-
-  return data;
-};
-
 function App() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -341,14 +318,6 @@ function App() {
     setQuery(suggestion);
     setSearchSuggestions([]); // Clear suggestions after selection
     setPage(1); // Reset to the first page
-  };
-
-  const handleArticleAppear = (index) => {
-    setTimeout(() => {
-      const newArticles = [...articles];
-      newArticles[index].isVisible = true;
-      setArticles(newArticles);
-    }, 10); // Small delay to allow the component to mount
   };
 
   return (
