@@ -61,10 +61,12 @@ function App() {
 
   const categories = [
     { value: "", label: "All" },
+    { value: "politics", label: "Politics", isQuery: true },
     { value: "business", label: "Business" },
-    { value: "entertainment", label: "Health" },
+    { value: "health", label: "Health", isQuery: false },
     { value: "science", label: "Science" },
-    { value: "sports", label: "Science" },
+    { value: "sports", label: "Sports" },
+    { value: "f1", label: "F1", isQuery: true },
     { value: "technology", label: "Technology" },
   ];
 
@@ -107,7 +109,7 @@ function App() {
         params.append("pageSize", 10);
 
         const response = await axios.get(
-          "https://nexora-backend.onrender.com/news",
+          "http://localhost:5003/news",
           { params }
         );
 
@@ -145,10 +147,8 @@ function App() {
         );
 
         const processedUniqueArticles = processArticles(uniqueArticles);
-        const sanitizedArticles = sanitizeApiResponse(processedUniqueArticles);
-
-        setArticles(sanitizedArticles);
-        cacheArticles(sanitizedArticles); // Cache the articles
+        setArticles(processedUniqueArticles);
+        cacheArticles(processedUniqueArticles); // Cache the articles
         setPage(1); // Reset page to 1 after loading new articles
         setError(null); // Clear any previous error messages
       } catch (apiError) {
@@ -208,7 +208,7 @@ function App() {
           params.append("pageSize", 10);
 
           const response = await axios.get(
-            "https://nexora-backend.onrender.com/news",
+            "http://localhost:5003/news",
             { params }
           );
 
@@ -246,9 +246,7 @@ function App() {
           );
 
           const processedUniqueArticles = processArticles(uniqueArticles);
-          const sanitizedArticles = sanitizeApiResponse(processedUniqueArticles);
-
-          setArticles((prevArticles) => [...prevArticles, ...sanitizedArticles]);
+          setArticles((prevArticles) => [...prevArticles, ...processedUniqueArticles]);
           setPage((prevPage) => prevPage + 1);
         } catch (error) {
           console.error("Error loading more articles:", error);
@@ -261,6 +259,18 @@ function App() {
 
     loadMoreArticles();
   }, [inView, loading, page, category, query, isPaginating]);
+
+  useEffect(() => {
+    console.log("Articles state updated:", articles);
+  }, [articles]);
+
+  useEffect(() => {
+    console.log("Loading state:", loading);
+  }, [loading]);
+
+  useEffect(() => {
+    console.log("Error state:", error);
+  }, [error]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -291,8 +301,14 @@ function App() {
     setShowSavedArticles(!showSavedArticles);
   };
 
-  const handleCategoryChange = async (newCategory) => {
-    setCategory(newCategory);
+  const handleCategoryChange = (cat) => {
+    if (cat.isQuery) {
+      setCategory(""); // Clear standard category
+      setQuery(cat.value); // Set as search query
+    } else {
+      setCategory(cat.value);
+      setQuery(""); // Clear search query when switching to standard category
+    }
     setPage(1);
   };
 
@@ -308,7 +324,7 @@ function App() {
         params.append("pageSize", 5); // Limit the number of suggestions
 
         const response = await axios.get(
-          "https://nexora-backend.onrender.com/suggestions",
+          "http://localhost:5003/suggestions",
           { params }
         );
         setSearchSuggestions(response.data);
@@ -392,9 +408,9 @@ function App() {
             <button
               key={cat.value}
               className={`category-chip ${
-                category === cat.value ? "active" : ""
+                (cat.isQuery && query === cat.value) || (!cat.isQuery && category === cat.value) ? "active" : ""
               }`}
-              onClick={() => handleCategoryChange(cat.value)}
+              onClick={() => handleCategoryChange(cat)}
             >
               {cat.label}
             </button>
@@ -420,13 +436,16 @@ function App() {
             return (
               <div
                 key={article.url || index}
-                className={`article-card ${article.isVisible ? 'fade-in' : 'fade-out'}`}
-                onAnimationStart={() => handleArticleAppear(currentIndex)}
+                className="article-card fade-in"
               >
                 <img
-                  src={article.urlToImage || "https://via.placeholder.com/150"}
+                  src={article.urlToImage || "https://placehold.co/150"}
                   alt={article.title}
                   loading="lazy" // Lazy loading for images
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://placehold.co/150";
+                  }}
                 />
                 <div className="article-content">
                   <h2>{article.title}</h2>
@@ -482,8 +501,12 @@ function App() {
           {savedArticles.map((article, index) => (
             <div key={index} className="article-card">
               <img
-                src={article.urlToImage || "https://via.placeholder.com/150"}
+                src={article.urlToImage || "https://placehold.co/150"}
                 alt={article.title}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://placehold.co/150";
+                }}
               />
               <div className="article-content">
                 <h2>{article.title}</h2>
